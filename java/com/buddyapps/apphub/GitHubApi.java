@@ -13,6 +13,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -89,6 +90,132 @@ public final class GitHubApi {
                 return out;
             }
         }, cb);
+    }
+
+    /** Catálogo público de apps publicadas desde la propia app. Lo puede leer cualquiera, sin token. */
+    public static void catalog(boolean force, Callback<List<CatalogItem>> cb) {
+        final String url = AppConfig.CATALOG_URL + (force ? "?t=" + System.currentTimeMillis() : "");
+        run(new Callable<List<CatalogItem>>() {
+            @Override public List<CatalogItem> call() throws Exception {
+                String body = fetch(url, false, force);
+                JSONArray arr = new JSONArray(body);
+                List<CatalogItem> out = new ArrayList<CatalogItem>();
+                for (int i = 0; i < arr.length(); i++) out.add(parseCatalogItem(arr.optJSONObject(i)));
+                return out;
+            }
+        }, cb);
+    }
+
+    /**
+     * Publica el catálogo en GitHub con el token del usuario. El token necesita permiso de
+     * escritura en el repositorio; si no lo tiene, GitHub devuelve 403 y se muestra un mensaje claro.
+     */
+    public static void publishCatalog(final List<CatalogItem> items, Callback<Void> cb) {
+        run(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                if (!StorePrefs.hasToken()) {
+                    throw new ApiException("Conecta tu GitHub con un token con permisos de escritura.");
+                }
+                JSONArray arr = new JSONArray();
+                for (CatalogItem it : items) arr.put(catalogJson(it));
+                String content = Base64.encodeToString(arr.toString().getBytes("UTF-8"), Base64.NO_WRAP);
+
+                String api = "https://api.github.com/repos/" + AppConfig.CATALOG_REPO
+                        + "/contents/catalog.json";
+                String sha = readCatalogSha(api);
+                JSONObject payload = new JSONObject();
+                payload.put("message", "AppHub: actualizar catálogo de apps");
+                payload.put("content", content);
+                if (sha != null) payload.put("sha", sha);
+                writeToGithub(api, "PUT", payload.toString());
+
+                // El catálogo cambió: invalida la copia en caché para que se vea al instante.
+                String key = AppConfig.CATALOG_URL + "|public";
+                cache.edit().remove(key + ".body").remove(key + ".etag").remove(key + ".ts").apply();
+                return null;
+            }
+        }, cb);
+    }
+
+    private static String readCatalogSha(String api) throws Exception {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(api).openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(20000);
+            conn.setRequestProperty("User-Agent", "AppHub/1.0 (Android)");
+            conn.setRequestProperty("Accept", "application/vnd.github+json");
+            conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+            conn.setRequestProperty("Authorization", "Bearer " + StorePrefs.token());
+            int code = conn.getResponseCode();
+            if (code == 404) return null; // El fichero aún no existe: se crea.
+            InputStream in = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            String body = read(in);
+            if (code >= 400) throw new ApiException(friendly(code, body));
+            return new JSONObject(body).optString("sha", null);
+        } catch (IOException e) {
+            throw new ApiException("No se pudo conectar con GitHub. Comprueba tu conexión.");
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private static void writeToGithub(String url, String method, String body) throws Exception {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestMethod(method);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(20000);
+            conn.setDoOutput(true);
+            conn.setRequestProperty("User-Agent", "AppHub/1.0 (Android)");
+            conn.setRequestProperty("Accept", "application/vnd.github+json");
+            conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + StorePrefs.token());
+            OutputStream os = conn.getOutputStream();
+            os.write(body.getBytes("UTF-8"));
+            os.close();
+            int code = conn.getResponseCode();
+            InputStream in = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            String response = read(in);
+            if (code >= 400) {
+                String extra = "";
+                String low = response.toLowerCase(Locale.US);
+                if (low.contains("write") || low.contains("permission") || low.contains("resource not accessible")) {
+                    extra = " El token necesita permisos de escritura (repo).";
+                }
+                throw new ApiException(friendly(code, response) + extra);
+            }
+        } catch (IOException e) {
+            throw new ApiException("No se pudo publicar. Comprueba tu conexión.");
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private static CatalogItem parseCatalogItem(JSONObject o) {
+        if (o == null) return null;
+        return new CatalogItem(o.optString("name"), o.optString("owner"), o.optString("repo"),
+                o.optString("description"), o.optString("category"), o.optString("version"),
+                o.optString("apkName"), o.optString("apkUrl"), o.optString("releaseUrl"));
+    }
+
+    private static JSONObject catalogJson(CatalogItem it) {
+        JSONObject o = new JSONObject();
+        try {
+            o.put("name", it.name);
+            o.put("owner", it.owner);
+            o.put("repo", it.repo);
+            o.put("description", it.description);
+            o.put("category", it.category);
+            o.put("version", it.version);
+            o.put("apkName", it.apkName);
+            o.put("apkUrl", it.apkUrl);
+            o.put("releaseUrl", it.releaseUrl);
+        } catch (Exception ignored) { }
+        return o;
     }
 
     /** Repositorios públicos de un desarrollador, sin necesidad de token. */
@@ -187,7 +314,7 @@ public final class GitHubApi {
     }
 
     private static void addImage(List<String> out, Set<String> seen, String url) {
-        if (url == null || seen.contains(url)) return;
+        if (out.size() >= 8 || url == null || seen.contains(url)) return;
         String lower = url.toLowerCase(Locale.US);
         if (lower.contains("shields.io") || lower.contains("badge") || lower.contains("travis-ci")
                 || lower.contains("codecov") || lower.contains("svg") || lower.startsWith("data:")) return;

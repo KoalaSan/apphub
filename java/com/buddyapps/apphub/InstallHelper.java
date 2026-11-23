@@ -37,6 +37,28 @@ public final class InstallHelper {
         return i;
     }
 
+    /** Abre directamente el instalador para un APK ya descargado. */
+    public static void install(Context c, Uri uri) {
+        c.startActivity(installIntent(c, uri));
+    }
+
+    public static void notifyFailed(Context c) {
+        NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel ch = new NotificationChannel(CHANNEL, "Instalación de apps",
+                    NotificationManager.IMPORTANCE_HIGH);
+            nm.createNotificationChannel(ch);
+        }
+        Notification n = new Notification.Builder(c, CHANNEL)
+                .setSmallIcon(android.R.drawable.stat_sys_warning)
+                .setContentTitle("Descarga fallida")
+                .setContentText("No se pudo descargar el APK. Comprueba tu conexión.")
+                .setAutoCancel(true)
+                .build();
+        nm.notify(NOTIFICATION_ID, n);
+    }
+
     public static void notifyReady(Context c, Uri uri, String appName) {
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;

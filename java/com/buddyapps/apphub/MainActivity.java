@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
     private final Map<String, TextView> updateLabels = new HashMap<String, TextView>();
 
     private LinearLayout exploreList, searchList, mineList, updatesAppList, mineCard, selfCard;
-    private LinearLayout categoryStrip, creatorList;
+    private LinearLayout categoryStrip, creatorList, creatorCard;
     private Status exploreStatus, searchStatus, mineStatus, updatesStatus, creatorStatus;
     private TextView selfResult, selfDownload, searchHeading;
     private EditText searchField, developerField;
@@ -243,24 +243,9 @@ public class MainActivity extends Activity {
 
     private Page buildCreatorPage() {
         Page p = newPage();
-        LinearLayout card = Ui.card(this);
-        card.addView(Ui.tv(this, "@" + AppConfig.CREATOR_LOGIN, 17, Ui.TEXT, true));
-        TextView body = Ui.tv(this,
-                "Las apps que el creador de AppHub va publicando en sus repositorios de GitHub. Pulsa una para ver sus capturas y descargar su APK.",
-                13, Ui.MUTED, false);
-        Ui.margins(body, 0, 6, 0, 0, this);
-        card.addView(body);
-        TextView profile = Ui.secondaryButton(this, "Ver perfil en GitHub");
-        Ui.margins(profile, 0, 12, 0, 0, this);
-        profile.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                startActivity(new Intent(Intent.ACTION_VIEW,
-                        Uri.parse("https://github.com/" + AppConfig.CREATOR_LOGIN)));
-            }
-        });
-        card.addView(profile);
-        p.box.addView(card);
-        Ui.margins(card, 0, 0, 0, 18, this);
+        creatorCard = Ui.card(this);
+        p.box.addView(creatorCard);
+        Ui.margins(creatorCard, 0, 0, 0, 18, this);
 
         p.box.addView(sectionTitle("Apps publicadas"));
         creatorList = Ui.vertical(this);
@@ -290,7 +275,33 @@ public class MainActivity extends Activity {
         Ui.margins(selfCard, 0, 0, 0, 20, this);
 
         LinearLayout head = Ui.horizontal(this);
-        head.addView(sectionTitle("Apps instaladas desde AppHub"));
+        head.addView(sectionTitle("Apps instaladas"));
+        TextView seeAll = Ui.tv(this, "Ver dispositivo", 13, Ui.PRIMARY, true);
+        seeAll.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6));
+        seeAll.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, InstalledAppsActivity.class));
+            }
+        });
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        ap.gravity = Gravity.CENTER_VERTICAL;
+        ap.leftMargin = Ui.dp(this, 8);
+        seeAll.setLayoutParams(ap);
+        head.addView(seeAll);
+        TextView downloads = Ui.tv(this, "Descargas", 13, Ui.PRIMARY, true);
+        downloads.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6));
+        downloads.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, DownloadsActivity.class));
+            }
+        });
+        LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        dp.gravity = Gravity.CENTER_VERTICAL;
+        dp.leftMargin = Ui.dp(this, 8);
+        downloads.setLayoutParams(dp);
+        head.addView(downloads);
         TextView check = Ui.tv(this, "Comprobar", 13, Ui.PRIMARY, true);
         check.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6));
         check.setOnClickListener(new View.OnClickListener() {
@@ -389,8 +400,10 @@ public class MainActivity extends Activity {
                     active ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
             navItems[i].setBackground(active ? Ui.rounded(0xFFE8F0FF, 12) : null);
         }
+        Anim.fadeIn(pages[index].scroll);
+        Anim.pop(navItems[index]);
         if (index == TAB_EXPLORE && !exploreLoaded) loadExplore(false);
-        if (index == TAB_CREATOR) loadCreator();
+        if (index == TAB_CREATOR) loadCreator(false);
         if (index == TAB_MINE) loadMine();
         if (index == TAB_UPDATES) loadUpdates();
     }
@@ -400,7 +413,7 @@ public class MainActivity extends Activity {
             explorePage++;
             loadExplore(true);
         } else if (tab == TAB_SEARCH) loadSearch(true);
-        else if (tab == TAB_CREATOR) loadCreator();
+        else if (tab == TAB_CREATOR) loadCreator(true);
         else if (tab == TAB_MINE) loadMine();
         else loadUpdates();
     }
@@ -537,26 +550,111 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void loadCreator() {
-        showStatus(creatorStatus, "Cargando apps de @" + AppConfig.CREATOR_LOGIN + "…", null);
-        GitHubApi.userPublicRepos(AppConfig.CREATOR_LOGIN, false, new GitHubApi.Callback<List<AppInfo>>() {
-            @Override public void onResult(List<AppInfo> list, Throwable error) {
+    private void loadCreator(boolean force) {
+        creatorCard.removeAllViews();
+        creatorCard.addView(Ui.tv(this, "Apps de @" + AppConfig.CREATOR_LOGIN, 17, Ui.TEXT, true));
+        TextView body = Ui.tv(this,
+                "Las apps que el creador va publicando en el catálogo de AppHub. Pulsa una para ver sus capturas y descargar su APK.",
+                13, Ui.MUTED, false);
+        Ui.margins(body, 0, 6, 0, 0, this);
+        creatorCard.addView(body);
+        TextView publish = Ui.primaryButton(this, "Publicar una app");
+        Ui.margins(publish, 0, 12, 0, 0, this);
+        publish.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, PublishActivity.class));
+            }
+        });
+        creatorCard.addView(publish);
+
+        showStatus(creatorStatus, "Cargando catálogo…", null);
+        GitHubApi.catalog(force, new GitHubApi.Callback<List<CatalogItem>>() {
+            @Override public void onResult(List<CatalogItem> list, Throwable error) {
                 if (isFinishing() || isDestroyed()) return;
                 creatorList.removeAllViews();
                 if (error != null) {
                     showStatus(creatorStatus, message(error), new Runnable() {
-                        @Override public void run() { loadCreator(); }
+                        @Override public void run() { loadCreator(true); }
                     });
                     return;
                 }
                 if (list == null || list.isEmpty()) {
-                    showStatus(creatorStatus, "Todavía no hay apps publicadas por el creador.", null);
+                    showStatus(creatorStatus,
+                            "Todavía no hay apps publicadas. Publica la primera desde «Publicar una app».", null);
                     return;
                 }
                 hideStatus(creatorStatus);
-                for (AppInfo app : list) if (app != null) addAppRow(creatorList, app, false);
+                for (CatalogItem it : list) if (it != null) addCatalogRow(creatorList, it);
             }
         });
+    }
+
+    private void addCatalogRow(LinearLayout container, final CatalogItem it) {
+        LinearLayout row = Ui.horizontal(this);
+        GradientDrawable bg = Ui.rounded(Ui.CARD, 14);
+        bg.setStroke(Ui.dp(this, 1), Ui.LINE);
+        row.setBackground(bg);
+        row.setPadding(Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12), Ui.dp(this, 12));
+        row.setElevation(Ui.dp(this, 1));
+
+        LinearLayout info = Ui.vertical(this);
+        LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        info.setLayoutParams(ip);
+        info.addView(Ui.tv(this, it.name, 15, Ui.TEXT, true));
+        TextView d = Ui.tv(this, it.description, 12, Ui.MUTED, false);
+        d.setMaxLines(2);
+        d.setEllipsize(TextUtils.TruncateAt.END);
+        Ui.margins(d, 0, 2, 0, 0, this);
+        info.addView(d);
+        LinearLayout meta = Ui.horizontal(this);
+        Ui.margins(meta, 0, 6, 0, 0, this);
+        meta.addView(Ui.tv(this, it.owner, 11, Ui.MUTED, false));
+        if (it.version != null && it.version.length() > 0) {
+            TextView v = Ui.tv(this, it.version, 10, Ui.PRIMARY, true);
+            v.setBackground(Ui.rounded(0xFFE8F0FF, 8));
+            v.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
+            LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            vp.leftMargin = Ui.dp(this, 8);
+            v.setLayoutParams(vp);
+            meta.addView(v);
+        }
+        if (it.category != null && it.category.length() > 0) {
+            TextView c = Ui.tv(this, it.category, 10, Ui.GREEN, true);
+            c.setBackground(Ui.rounded(Ui.GREEN_BG, 8));
+            c.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
+            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            cp.leftMargin = Ui.dp(this, 6);
+            c.setLayoutParams(cp);
+            meta.addView(c);
+        }
+        info.addView(meta);
+        row.addView(info);
+        ImageView action = Ui.icon(this, R.drawable.ic_download, Ui.PRIMARY, 20);
+        action.setPadding(Ui.dp(this, 8), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
+        action.setContentDescription("Ver app");
+        row.addView(action);
+
+        final String owner = it.owner;
+        final String repoName = it.repo == null ? "" : it.repo;
+        final String simple = repoName.contains("/") ? repoName.substring(repoName.indexOf('/') + 1) : repoName;
+        final String description = it.description;
+        View.OnClickListener open = new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                AppInfo app = new AppInfo(repoName, owner, simple, description,
+                        "https://github.com/" + repoName, "", 0);
+                openDetail(app);
+            }
+        };
+        row.setOnClickListener(open);
+        action.setOnClickListener(open);
+        LinearLayout.LayoutParams lp = rowParams();
+        lp.bottomMargin = Ui.dp(this, 8);
+        row.setLayoutParams(lp);
+        container.addView(row);
+        Anim.slideIn(row, Math.min(container.getChildCount() - 1, 6) * 55);
     }
 
     private void loadVersionBadge(final AppInfo app) {
@@ -671,6 +769,7 @@ public class MainActivity extends Activity {
         lp.bottomMargin = Ui.dp(this, 8);
         row.setLayoutParams(lp);
         container.addView(row);
+        Anim.slideIn(row, Math.min(container.getChildCount() - 1, 6) * 55);
     }
 
     private void openDetail(AppInfo app) {
@@ -861,6 +960,7 @@ public class MainActivity extends Activity {
             row.addView(state);
             updateLabels.put(item.repo, state);
             updatesAppList.addView(row);
+            Anim.slideIn(row, Math.min(updatesAppList.getChildCount() - 1, 6) * 55);
         }
     }
 
@@ -913,7 +1013,11 @@ public class MainActivity extends Activity {
         }
         long id = DownloadLauncher.enqueue(this, app, release);
         if (id == -1) Toast.makeText(this, "No se pudo iniciar la descarga", Toast.LENGTH_SHORT).show();
-        else Toast.makeText(this, "Descarga iniciada · toca la notificación para instalar", Toast.LENGTH_LONG).show();
+        else {
+            Toast.makeText(this, "Descarga iniciada · verás el progreso y podrás instalar al terminar",
+                    Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, DownloadsActivity.class));
+        }
     }
 
     private static String message(Throwable error) {

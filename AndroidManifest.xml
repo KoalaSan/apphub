@@ -21,6 +21,11 @@
         <activity android:name=".AppDetailActivity" android:exported="false" />
         <activity android:name=".TokenActivity" android:exported="false" />
         <activity android:name=".SelfRepoActivity" android:exported="false" />
+        <activity android:name=".PublishActivity" android:exported="false" />
+        <activity android:name=".DownloadsActivity" android:exported="false" />
+        <activity android:name=".InstalledAppsActivity" android:exported="false" />
+        <activity android:name=".InstallPromptActivity" android:exported="false"
+            android:theme="@android:style/Theme.Material.Light.Dialog.Alert" />
 
         <receiver android:name=".DownloadReceiver" android:exported="false">
             <intent-filter>

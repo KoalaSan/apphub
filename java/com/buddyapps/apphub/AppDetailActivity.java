@@ -255,7 +255,11 @@ public class AppDetailActivity extends Activity {
         }
         long id = DownloadLauncher.enqueue(this, app, release);
         if (id == -1) Toast.makeText(this, "No se pudo iniciar la descarga", Toast.LENGTH_SHORT).show();
-        else Toast.makeText(this, "Descarga iniciada · toca la notificación para instalar", Toast.LENGTH_LONG).show();
+        else {
+            Toast.makeText(this, "Descarga iniciada · verás el progreso y podrás instalar al terminar",
+                    Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, DownloadsActivity.class));
+        }
     }
 
     private static String readableSize(long bytes) {

@@ -82,6 +82,7 @@ public final class Ui {
         b.setBackground(rounded(bg, 12));
         b.setPadding(dp(c, 16), dp(c, 12), dp(c, 16), dp(c, 12));
         b.setMinHeight(dp(c, 46));
+        Anim.press(b);
         return b;
     }
 
@@ -144,7 +145,12 @@ public final class Ui {
         if (refresh != null) {
             ImageView iv = icon(c, R.drawable.ic_refresh, PRIMARY, 22);
             iv.setPadding(dp(c, 8), dp(c, 8), dp(c, 8), dp(c, 8));
-            iv.setOnClickListener(refresh);
+            iv.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    Anim.spin(v);
+                    refresh.onClick(v);
+                }
+            });
             iv.setContentDescription("Actualizar");
             h.addView(iv);
         }

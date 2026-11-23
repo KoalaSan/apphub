@@ -51,12 +51,17 @@ public final class StorePrefs {
         public final String repo;
         public final String version;
         public final String apkName;
+        public final String packageName;
+        public final String appName;
         public final long installedAt;
 
-        Tracked(String repo, String version, String apkName, long installedAt) {
+        Tracked(String repo, String version, String apkName, String packageName,
+                String appName, long installedAt) {
             this.repo = repo;
             this.version = version;
             this.apkName = apkName;
+            this.packageName = packageName;
+            this.appName = appName;
             this.installedAt = installedAt;
         }
     }
@@ -78,11 +83,18 @@ public final class StorePrefs {
     }
 
     public static synchronized void track(String repo, String version, String apkName) {
+        track(repo, version, apkName, "", "");
+    }
+
+    public static synchronized void track(String repo, String version, String apkName,
+                                          String packageName, String appName) {
         try {
             JSONObject root = new JSONObject(prefs.getString(APPS, "{}"));
             JSONObject item = new JSONObject();
             item.put("version", version == null ? "" : version);
             item.put("apkName", apkName == null ? "" : apkName);
+            item.put("packageName", packageName == null ? "" : packageName);
+            item.put("appName", appName == null ? "" : appName);
             item.put("installedAt", System.currentTimeMillis());
             root.put(repo, item);
             prefs.edit().putString(APPS, root.toString()).apply();
@@ -98,6 +110,7 @@ public final class StorePrefs {
             JSONObject item = root.optJSONObject(repo);
             if (item == null) return null;
             return new Tracked(repo, item.optString("version"), item.optString("apkName"),
+                    item.optString("packageName"), item.optString("appName"),
                     item.optLong("installedAt"));
         } catch (Exception e) {
             return null;
@@ -113,10 +126,21 @@ public final class StorePrefs {
                 String repo = keys.next();
                 JSONObject item = root.optJSONObject(repo);
                 if (item != null) out.add(new Tracked(repo, item.optString("version"),
-                        item.optString("apkName"), item.optLong("installedAt")));
+                        item.optString("apkName"), item.optString("packageName"),
+                        item.optString("appName"), item.optLong("installedAt")));
             }
         } catch (Exception ignored) { }
         return out;
+    }
+
+    /** Busca una app registrada por el nombre de paquete instalado (o por nombre visible). */
+    public static synchronized Tracked trackedByPackage(String packageName, String appName) {
+        for (Tracked t : allTracked()) {
+            if (packageName != null && packageName.length() > 0
+                    && packageName.equals(t.packageName)) return t;
+            if (appName != null && appName.length() > 0 && appName.equals(t.appName)) return t;
+        }
+        return null;
     }
 
     public static synchronized void removeTracked(String repo) {
@@ -141,18 +165,41 @@ public final class StorePrefs {
         } catch (Exception ignored) { }
     }
 
-    public static synchronized DownloadInfo takeDownload(long id) {
+    public static synchronized DownloadInfo getDownload(long id) {
         try {
             JSONObject root = new JSONObject(prefs.getString(DOWNLOADS, "{}"));
-            String key = Long.toString(id);
-            JSONObject item = root.optJSONObject(key);
+            JSONObject item = root.optJSONObject(Long.toString(id));
             if (item == null) return null;
-            root.remove(key);
-            prefs.edit().putString(DOWNLOADS, root.toString()).apply();
             return new DownloadInfo(id, item.optString("repo"), item.optString("appName"),
                     item.optString("version"), item.optString("apkName"));
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public static synchronized List<DownloadInfo> allDownloads() {
+        List<DownloadInfo> out = new ArrayList<DownloadInfo>();
+        try {
+            JSONObject root = new JSONObject(prefs.getString(DOWNLOADS, "{}"));
+            Iterator<String> keys = root.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                JSONObject item = root.optJSONObject(key);
+                if (item == null) continue;
+                long id;
+                try { id = Long.parseLong(key); } catch (Exception e) { continue; }
+                out.add(new DownloadInfo(id, item.optString("repo"), item.optString("appName"),
+                        item.optString("version"), item.optString("apkName")));
+            }
+        } catch (Exception ignored) { }
+        return out;
+    }
+
+    public static synchronized void removeDownload(long id) {
+        try {
+            JSONObject root = new JSONObject(prefs.getString(DOWNLOADS, "{}"));
+            root.remove(Long.toString(id));
+            prefs.edit().putString(DOWNLOADS, root.toString()).apply();
+        } catch (Exception ignored) { }
     }
 }
