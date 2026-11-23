@@ -13,9 +13,17 @@ public final class CatalogItem implements Serializable {
     public final String apkName;
     public final String apkUrl;
     public final String releaseUrl;
+    /** Nombre de paquete Android: permite reconocer la app ya instalada en el dispositivo. */
+    public final String packageName;
 
     public CatalogItem(String name, String owner, String repo, String description, String category,
                        String version, String apkName, String apkUrl, String releaseUrl) {
+        this(name, owner, repo, description, category, version, apkName, apkUrl, releaseUrl, "");
+    }
+
+    public CatalogItem(String name, String owner, String repo, String description, String category,
+                       String version, String apkName, String apkUrl, String releaseUrl,
+                       String packageName) {
         this.name = name;
         this.owner = owner;
         this.repo = repo;
@@ -25,5 +33,6 @@ public final class CatalogItem implements Serializable {
         this.apkName = apkName;
         this.apkUrl = apkUrl;
         this.releaseUrl = releaseUrl;
+        this.packageName = packageName == null ? "" : packageName;
     }
 }

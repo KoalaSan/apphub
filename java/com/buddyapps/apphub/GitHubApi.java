@@ -199,7 +199,8 @@ public final class GitHubApi {
         if (o == null) return null;
         return new CatalogItem(o.optString("name"), o.optString("owner"), o.optString("repo"),
                 o.optString("description"), o.optString("category"), o.optString("version"),
-                o.optString("apkName"), o.optString("apkUrl"), o.optString("releaseUrl"));
+                o.optString("apkName"), o.optString("apkUrl"), o.optString("releaseUrl"),
+                o.optString("packageName"));
     }
 
     private static JSONObject catalogJson(CatalogItem it) {
@@ -214,6 +215,7 @@ public final class GitHubApi {
             o.put("apkName", it.apkName);
             o.put("apkUrl", it.apkUrl);
             o.put("releaseUrl", it.releaseUrl);
+            o.put("packageName", it.packageName);
         } catch (Exception ignored) { }
         return o;
     }
@@ -228,6 +230,31 @@ public final class GitHubApi {
                 List<AppInfo> out = new ArrayList<AppInfo>();
                 for (int i = 0; i < root.length(); i++) out.add(parseRepo(root.optJSONObject(i)));
                 return out;
+            }
+        }, cb);
+    }
+
+    /** Licencia, lenguaje, temas y enlaces del repositorio para la ficha de la app. */
+    public static void repoMeta(String repo, boolean force, Callback<RepoMeta> cb) {
+        final String url = "https://api.github.com/repos/" + repo;
+        run(new Callable<RepoMeta>() {
+            @Override public RepoMeta call() throws Exception {
+                JSONObject o = new JSONObject(fetch(url, true, force));
+                JSONObject lic = o.optJSONObject("license");
+                String name = lic == null ? "" : lic.optString("name");
+                String spdx = lic == null ? "" : lic.optString("spdx_id");
+                String licUrl = lic == null ? "" : lic.optString("html_url");
+                List<String> topics = new ArrayList<String>();
+                JSONArray ta = o.optJSONArray("topics");
+                if (ta != null) {
+                    for (int i = 0; i < ta.length() && topics.size() < 8; i++) {
+                        String t = ta.optString(i);
+                        if (t != null && t.length() > 0) topics.add(t);
+                    }
+                }
+                return new RepoMeta(name, spdx, licUrl, o.optString("language"),
+                        o.optString("homepage"), o.optInt("forks_count"),
+                        o.optInt("open_issues_count"), o.optString("pushed_at"), topics);
             }
         }, cb);
     }

@@ -16,6 +16,7 @@ public final class StorePrefs {
     private static final String SELF_REPO = "self_repo";
     private static final String APPS = "installed_apps";
     private static final String DOWNLOADS = "pending_downloads";
+    private static final String PENDING = "pending_installs";
 
     private static SharedPreferences prefs;
 
@@ -63,6 +64,18 @@ public final class StorePrefs {
             this.packageName = packageName;
             this.appName = appName;
             this.installedAt = installedAt;
+        }
+    }
+
+    /** APK descargado esperando a que el sistema confirme su instalación. */
+    public static final class PendingInstall {
+        public final String packageName, repo, version, apkName, appName;
+        PendingInstall(String packageName, String repo, String version, String apkName, String appName) {
+            this.packageName = packageName;
+            this.repo = repo;
+            this.version = version;
+            this.apkName = apkName;
+            this.appName = appName;
         }
     }
 
@@ -141,6 +154,50 @@ public final class StorePrefs {
             if (appName != null && appName.length() > 0 && appName.equals(t.appName)) return t;
         }
         return null;
+    }
+
+    public static synchronized void addPendingInstall(String packageName, String repo,
+                                                      String version, String apkName, String appName) {
+        if (packageName == null || packageName.length() == 0) return;
+        try {
+            JSONObject root = new JSONObject(prefs.getString(PENDING, "{}"));
+            JSONObject item = new JSONObject();
+            item.put("repo", repo == null ? "" : repo);
+            item.put("version", version == null ? "" : version);
+            item.put("apkName", apkName == null ? "" : apkName);
+            item.put("appName", appName == null ? "" : appName);
+            root.put(packageName, item);
+            prefs.edit().putString(PENDING, root.toString()).apply();
+        } catch (Exception ignored) { }
+    }
+
+    public static synchronized PendingInstall pendingInstall(String packageName) {
+        if (packageName == null || packageName.length() == 0) return null;
+        try {
+            JSONObject root = new JSONObject(prefs.getString(PENDING, "{}"));
+            JSONObject item = root.optJSONObject(packageName);
+            if (item == null) return null;
+            return new PendingInstall(packageName, item.optString("repo"), item.optString("version"),
+                    item.optString("apkName"), item.optString("appName"));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static synchronized void removePendingInstall(String packageName) {
+        if (packageName == null) return;
+        try {
+            JSONObject root = new JSONObject(prefs.getString(PENDING, "{}"));
+            root.remove(packageName);
+            prefs.edit().putString(PENDING, root.toString()).apply();
+        } catch (Exception ignored) { }
+    }
+
+    /** True si el paquete corresponde a una app instalada desde AppHub. */
+    public static synchronized boolean isFromHub(String packageName) {
+        if (packageName == null || packageName.length() == 0) return false;
+        for (Tracked t : allTracked()) if (packageName.equals(t.packageName)) return true;
+        return false;
     }
 
     public static synchronized void removeTracked(String repo) {

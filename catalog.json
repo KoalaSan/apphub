@@ -5,9 +5,10 @@
     "repo": "KoalaSan/apphub",
     "description": "Tienda de apps basada en GitHub: descubre, instala y actualiza APKs publicados por la comunidad y por el creador.",
     "category": "Herramientas",
-    "version": "1.5",
+    "version": "1.6",
     "apkName": "app.apk",
     "apkUrl": "https://github.com/KoalaSan/apphub/releases/latest/download/app.apk",
-    "releaseUrl": "https://github.com/KoalaSan/apphub/releases"
+    "releaseUrl": "https://github.com/KoalaSan/apphub/releases",
+    "packageName": "com.buddyapps.apphub"
   }
 ]

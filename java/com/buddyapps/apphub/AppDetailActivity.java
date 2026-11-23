@@ -26,6 +26,7 @@ public class AppDetailActivity extends Activity {
     private AppInfo app;
     private LinearLayout body;
     private LinearLayout readmeBox;
+    private LinearLayout metaBox;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,6 +122,9 @@ public class AppDetailActivity extends Activity {
         body.addView(hero);
         Ui.margins(hero, 0, 0, 0, 12, this);
 
+        metaBox = Ui.vertical(this);
+        body.addView(metaBox);
+
         readmeBox = Ui.vertical(this);
         body.addView(readmeBox);
 
@@ -170,7 +174,96 @@ public class AppDetailActivity extends Activity {
                 11, Ui.MUTED, false);
         Ui.margins(note, 0, 16, 0, 0, this);
         body.addView(note);
+        loadMeta();
         loadReadme();
+    }
+
+    private void loadMeta() {
+        GitHubApi.repoMeta(app.fullName, false, new GitHubApi.Callback<RepoMeta>() {
+            @Override public void onResult(RepoMeta meta, Throwable error) {
+                if (isFinishing() || isDestroyed() || metaBox == null || meta == null) return;
+                metaBox.removeAllViews();
+                LinearLayout card = Ui.card(AppDetailActivity.this);
+                card.addView(Ui.tv(AppDetailActivity.this, "El proyecto", 15, Ui.TEXT, true));
+
+                LinearLayout chips = Ui.horizontal(AppDetailActivity.this);
+                chips.setPadding(0, Ui.dp(AppDetailActivity.this, 10), 0, 0);
+                if (meta.hasLicense()) {
+                    TextView lic = Ui.tv(AppDetailActivity.this,
+                            "Licencia " + meta.licenseLabel(), 11, Ui.GREEN, true);
+                    lic.setBackground(Ui.rounded(Ui.GREEN_BG, 10));
+                    lic.setPadding(Ui.dp(AppDetailActivity.this, 8), Ui.dp(AppDetailActivity.this, 4),
+                            Ui.dp(AppDetailActivity.this, 8), Ui.dp(AppDetailActivity.this, 4));
+                    chips.addView(lic);
+                    if (meta.licenseUrl.length() > 0) {
+                        final String url = meta.licenseUrl;
+                        lic.setOnClickListener(new View.OnClickListener() {
+                            @Override public void onClick(View v) {
+                                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                            }
+                        });
+                    }
+                }
+                if (meta.language.length() > 0) {
+                    TextView lang = Ui.tv(AppDetailActivity.this, meta.language, 11, Ui.PRIMARY, true);
+                    lang.setBackground(Ui.rounded(0xFFE8F0FF, 10));
+                    lang.setPadding(Ui.dp(AppDetailActivity.this, 8), Ui.dp(AppDetailActivity.this, 4),
+                            Ui.dp(AppDetailActivity.this, 8), Ui.dp(AppDetailActivity.this, 4));
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    lp.leftMargin = Ui.dp(AppDetailActivity.this, 6);
+                    lang.setLayoutParams(lp);
+                    chips.addView(lang);
+                }
+                card.addView(chips);
+
+                TextView facts = Ui.tv(AppDetailActivity.this,
+                        meta.forks + " forks  ·  " + meta.issues + " incidencias abiertas",
+                        12, Ui.MUTED, false);
+                Ui.margins(facts, 0, 10, 0, 0, AppDetailActivity.this);
+                card.addView(facts);
+
+                if (!meta.topics.isEmpty()) {
+                    HorizontalScrollView ts = new HorizontalScrollView(AppDetailActivity.this);
+                    ts.setHorizontalScrollBarEnabled(false);
+                    LinearLayout strip = Ui.horizontal(AppDetailActivity.this);
+                    for (String topic : meta.topics) {
+                        TextView t = Ui.tv(AppDetailActivity.this, topic, 11, Ui.MUTED, false);
+                        t.setBackground(Ui.rounded(Ui.BG, 8));
+                        t.setPadding(Ui.dp(AppDetailActivity.this, 8), Ui.dp(AppDetailActivity.this, 4),
+                                Ui.dp(AppDetailActivity.this, 8), Ui.dp(AppDetailActivity.this, 4));
+                        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        tp.rightMargin = Ui.dp(AppDetailActivity.this, 6);
+                        t.setLayoutParams(tp);
+                        strip.addView(t);
+                    }
+                    LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    sp.topMargin = Ui.dp(AppDetailActivity.this, 10);
+                    strip.setLayoutParams(sp);
+                    ts.addView(strip);
+                    card.addView(ts);
+                }
+
+                if (meta.homepage.length() > 0) {
+                    final String url = meta.homepage.startsWith("http") ? meta.homepage
+                            : "https://" + meta.homepage;
+                    TextView home = Ui.tv(AppDetailActivity.this, "Sitio web del proyecto →",
+                            12, Ui.PRIMARY, true);
+                    Ui.margins(home, 0, 12, 0, 0, AppDetailActivity.this);
+                    home.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                        }
+                    });
+                    card.addView(home);
+                }
+                metaBox.addView(card);
+                Ui.margins(card, 0, 0, 0, 12, AppDetailActivity.this);
+                Anim.fadeIn(card);
+            }
+        });
     }
 
     private void loadReadme() {
