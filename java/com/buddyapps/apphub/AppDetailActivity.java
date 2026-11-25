@@ -306,7 +306,12 @@ public class AppDetailActivity extends Activity {
                         RemoteImageLoader.load(image, url, w, h);
                         image.setOnClickListener(new View.OnClickListener() {
                             @Override public void onClick(View v) {
-                                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                                // El visor vive dentro de la app: nunca se abre el navegador.
+                                Intent viewer = new Intent(AppDetailActivity.this, ImageViewerActivity.class);
+                                viewer.putExtra("url", url);
+                                startActivity(viewer);
+                                overridePendingTransition(android.R.anim.fade_in,
+                                        android.R.anim.fade_out);
                             }
                         });
                         strip.addView(image);

@@ -24,6 +24,8 @@
         <activity android:name=".PublishActivity" android:exported="false" />
         <activity android:name=".DownloadsActivity" android:exported="false" />
         <activity android:name=".InstalledAppsActivity" android:exported="false" />
+        <activity android:name=".ImageViewerActivity" android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
         <activity android:name=".InstallPromptActivity" android:exported="false"
             android:theme="@android:style/Theme.Material.Light.Dialog.Alert" />
 

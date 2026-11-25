@@ -12,13 +12,13 @@ Proyecto: tienda de apps basada en GitHub (package `com.buddyapps.apphub`).
 | A6 | Publicar una app en el catálogo | El usuario lo pidió tras dar el token | Elegir repo propio y publicarlo en `catalog.json` de `KoalaSan/apphub` con el token; visible para todos en la pestaña Creador | implementado v1.3 | build v1.3/v1.5 OK · push pendiente |
 | A7 | Auditoría visual y funcional en dispositivo | "Terminado" significa verificado | Capturas de las 5 pestañas, detalle con fotos, estados vacío/error, descarga e instalación | **en curso — bloqueado por uso activo del teléfono** | — |
 
-## Estado actual (v1.5, versionCode 6)
+## Estado actual (v1.7, versionCode 8)
 - Compila correctamente (`build-apk.sh` → `build/app.apk`, firmado).
-- Nuevo en v1.5: `InstalledAppsActivity` escanea las apps del usuario (`PackageManager`),
-  marca las instaladas desde AppHub y comprueba actualizaciones contra GitHub;
-  animaciones en pestañas, filas, botones, icono de actualizar y barra de progreso;
-  descarga con progreso en vivo y diálogo «¿Instalar ahora?» al terminar.
-- Pendiente: instalar v1.5 en el teléfono y verificar A7; subir `catalog.json` y la v1.5 a GitHub.
+- Nuevo en v1.7: visor de capturas propio (`ImageViewerActivity`) con zoom, arrastre y carga segura de imágenes;
+  las capturas ya no abren el navegador.
+- De v1.5/v1.6: `InstalledAppsActivity` escanea las apps del usuario, comprueba actualizaciones contra GitHub,
+  animaciones y descarga con progreso en vivo y diálogo «¿Instalar ahora?».
+- Pendiente: instalar v1.7 en el teléfono y verificar A7; subir `catalog.json` y la release a GitHub.
 
 Notas: el token se introduce en la propia app (nunca lo teclea Buddy ni se guarda en ficheros).
 Buddy usa la sesión `gh` ya autenticada para publicar en `KoalaSan/apphub`.

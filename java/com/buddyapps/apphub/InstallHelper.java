@@ -59,6 +59,29 @@ public final class InstallHelper {
         nm.notify(NOTIFICATION_ID, n);
     }
 
+    /** Avisa de que una app instalada tiene una versión nueva en GitHub. */
+    public static void notifyUpdate(Context c, String appName, String version) {
+        NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel ch = new NotificationChannel(CHANNEL, "Instalación de apps",
+                    NotificationManager.IMPORTANCE_HIGH);
+            nm.createNotificationChannel(ch);
+        }
+        Intent i = new Intent(c, InstalledAppsActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        PendingIntent pi = PendingIntent.getActivity(c, 732, i,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification n = new Notification.Builder(c, CHANNEL)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentTitle("Actualización disponible")
+                .setContentText(appName + " · " + version)
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build();
+        nm.notify(732, n);
+    }
+
     public static void notifyReady(Context c, Uri uri, String appName) {
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;

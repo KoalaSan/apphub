@@ -36,3 +36,10 @@
 - Regresiones: ninguna conocida.
 - Siguiente tarea: que el usuario instale v1.5 → verificar las 5 pestañas, detalle con fotos, descarga/instalación
   y detección de apps instaladas (A7); luego publicar `catalog.json` y release v1.5 en GitHub (pedir confirmación).
+
+## 2026-11-25 — Lote: visor de capturas dentro de la app (v1.7, code 8)
+- Cambios: `ImageViewerActivity` con ajuste inicial, pellizco, arrastre, botón «Ajustar» y estado de error;
+  `RemoteImageLoader.loadFull` decodifica con `inSampleSize` (lado máximo 2400 px) y avisa de carga/fallo;
+  las capturas de `AppDetailActivity` abren el visor en lugar del navegador; limpieza de imports y campos sin uso.
+- Compilación: OK (`build/app.apk`, firmado, versionCode 8 / v1.7).
+- Verificación en dispositivo: pendiente (la v1.7 aún no está instalada).

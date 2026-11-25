@@ -112,6 +112,16 @@ public class InstalledAppsActivity extends Activity {
             }
         });
         top.addView(filter);
+
+        final TextView check = Ui.primaryButton(this, "Comprobar actualizaciones");
+        Ui.margins(check, 0, 12, 0, 0, this);
+        check.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                Anim.spin(v);
+                checkUpdates();
+            }
+        });
+        top.addView(check);
         box.addView(top);
         Ui.margins(top, 0, 0, 0, 14, this);
 
@@ -143,7 +153,9 @@ public class InstalledAppsActivity extends Activity {
                 StorePrefs.removePendingInstall(item.pkg);
             }
             // 2) Coincidencia por paquete o nombre guardado.
-            item.tracked = StorePrefs.trackedByPackage(item.pkg, item.label);
+            // Solo por paquete: comparar por nombre daba falsos positivos (p. ej. una
+            // calculadora cualquiera se marcaba como "de GitHub" y se ofrecía actualizar).
+            item.tracked = StorePrefs.trackedByPackage(item.pkg, null);
             all.add(item);
         }
         Collections.sort(all, new Comparator<Installed>() {
@@ -176,7 +188,8 @@ public class InstalledAppsActivity extends Activity {
                 }
                 updateSummary();
                 render();
-                checkUpdates();
+                // No comprobamos automáticamente: cada revisión gasta peticiones a GitHub
+                // y el usuario puede tener Many apps. El botón lo hace bajo demanda.
             }
         });
     }
@@ -298,10 +311,13 @@ public class InstalledAppsActivity extends Activity {
     }
 
     private void checkUpdates() {
+        int checked = 0;
         for (final Installed item : all) {
-            if (item.tracked == null) continue;
+            if (item.tracked == null || checked >= 8) continue; // limita peticiones a GitHub
+            checked++;
             final StorePrefs.Tracked t = item.tracked;
-            GitHubApi.latestRelease(t.repo, false, new GitHubApi.Callback<ReleaseInfo>() {
+            if (item.state != null) item.state.setText("Comprobando…");
+            GitHubApi.latestRelease(t.repo, true, new GitHubApi.Callback<ReleaseInfo>() {
                 @Override public void onResult(ReleaseInfo release, Throwable error) {
                     if (isFinishing()) return;
                     if (item.state == null) return;
@@ -312,6 +328,7 @@ public class InstalledAppsActivity extends Activity {
                     if (Versions.isNewer(release.tag, item.version)) {
                         item.state.setText("Actualización disponible: " + release.tag + " · toca para descargar");
                         item.state.setTextColor(Ui.GREEN);
+                        InstallHelper.notifyUpdate(InstalledAppsActivity.this, item.label, release.tag);
                         final ReleaseInfo r = release;
                         item.state.setOnClickListener(new View.OnClickListener() {
                             @Override public void onClick(View v) {
@@ -342,10 +359,8 @@ public class InstalledAppsActivity extends Activity {
     }
 
     private void open(Installed item) {
-        if (item.tracked != null && item.state != null && item.state.hasOnClickListeners()) {
-            item.state.performClick();
-            return;
-        }
+        // Tocar la fila SIEMPRE abre la app; nunca inicia una descarga. Las descargas
+        // solo se hacen pulsando el texto "toca para descargar" de forma explícita.
         Intent launch = getPackageManager().getLaunchIntentForPackage(item.pkg);
         if (launch != null) {
             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
